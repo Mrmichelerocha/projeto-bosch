@@ -3,6 +3,7 @@ import fitz  # PyMuPDF
 import pdfplumber
 import os
 from io import BytesIO
+import easyocr
 
 app = Flask(__name__)
 
@@ -14,6 +15,9 @@ TABLES_DIR = "table"
 for directory in [IMAGES_DIR, TEXT_DIR, TABLES_DIR]:
     if not os.path.exists(directory):
         os.makedirs(directory)
+
+# Inicializa o leitor do EasyOCR com suporte ao português
+reader = easyocr.Reader(['pt', 'en'], gpu=False)
 
 @app.route('/')
 def home():
@@ -63,23 +67,32 @@ def process_pdf():
         with pdfplumber.open(pdf_bytes) as pdf:
             dados_pdf["numero_paginas"] = len(pdf.pages)
             for i, pagina in enumerate(pdf.pages):
-                # Extrai e salva texto
-                texto = pagina.extract_text()
-                if texto:
-                    text_path = os.path.join(TEXT_DIR, f"page_{i+1}.txt")
-                    with open(text_path, "w", encoding="utf-8") as text_file:
-                        text_file.write(texto)
-                    dados_pdf["textos_paginas"][f"pagina_{i+1}"] = text_path
-
-                # Extrai e salva tabelas
+                # Extrai tabelas
                 tabelas = pagina.extract_tables()
+                texto_exclusivo = pagina.extract_text()
+
+                # Remove linhas de texto que estão em tabelas
                 if tabelas:
                     table_path = os.path.join(TABLES_DIR, f"page_{i+1}_table.csv")
                     with open(table_path, "w", encoding="utf-8") as table_file:
                         for tabela in tabelas:
                             for linha in tabela:
                                 table_file.write(",".join(map(str, linha)) + "\n")
+
+                    # Remove texto das tabelas do texto geral
+                    for tabela in tabelas:
+                        tabela_texto = [" ".join(map(str, linha)) for linha in tabela]
+                        for linha in tabela_texto:
+                            texto_exclusivo = texto_exclusivo.replace(linha, "")
+
                     dados_pdf["tabelas_paginas"][f"pagina_{i+1}"] = table_path
+
+                # Salva texto restante (excluindo tabelas)
+                if texto_exclusivo.strip():
+                    text_path = os.path.join(TEXT_DIR, f"page_{i+1}.txt")
+                    with open(text_path, "w", encoding="utf-8") as text_file:
+                        text_file.write(texto_exclusivo.strip())
+                    dados_pdf["textos_paginas"][f"pagina_{i+1}"] = text_path
 
         # Processa imagens usando fitz
         pdf_bytes.seek(0)  # Resetamos o stream para o fitz
@@ -98,7 +111,13 @@ def process_pdf():
                 with open(image_path, "wb") as image_file:
                     image_file.write(image_bytes)
 
-                imagens.append({"path": image_path, "type": image_ext})
+                # OCR na imagem extraída
+                ocr_text = reader.readtext(image_path, detail=0)
+                ocr_text_path = os.path.join(IMAGES_DIR, f"page_{i+1}_image_{img_index + 1}_ocr.txt")
+                with open(ocr_text_path, "w", encoding="utf-8") as ocr_file:
+                    ocr_file.write("\n".join(ocr_text))
+
+                imagens.append({"path": image_path, "ocr_text_path": ocr_text_path, "type": image_ext})
 
             if imagens:
                 dados_pdf["imagens_paginas"][f"pagina_{i+1}"] = imagens

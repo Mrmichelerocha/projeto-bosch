@@ -76,3 +76,13 @@ https://getbootstrap.com/docs/4.1/examples/
 view-source:(endereço)
 // css da pagina 
 view-source:(endereço)(neme arquivo css).css
+
+
+//git flow
+
+git flow init
+git flow feature start Project-Setup 
+git add .
+git commit -m ""
+
+git flow release start 1.0.0 

@@ -3,3 +3,7 @@ venv
 .venv/
 .venv
 .env
+img/
+table/
+text/
+chunked_data.json
