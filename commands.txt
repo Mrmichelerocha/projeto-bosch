@@ -81,7 +81,7 @@ view-source:(endereço)(neme arquivo css).css
 //git flow
 
 git flow init
-git flow feature start Project-Setup 
+git flow feature start nome
 git add .
 git commit -m ""
 

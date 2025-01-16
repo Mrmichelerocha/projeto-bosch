@@ -4,6 +4,12 @@ venv
 .venv
 .env
 img/
+img
 table/
+table
 text/
+text
 chunked_data.json
+embeddings_with_metadata.json
+embeddings.npy
+faiss_index.faiss
