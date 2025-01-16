@@ -1,0 +1,78 @@
+// windows powershell
+python -m venv venv    
+.\venv\Scripts\Activate.ps1
+
+// windows cmd
+virtualenv .venv
+.venv/bin/activate
+
+// Linux
+virtualenv .venv
+source .venv/bin/activate
+
+:::: python manage.py runserver
+deactivate
+
+
+python -m pip install django
+django-admin startproject core .
+python manage.py startapp index
+
+
+npm --version
+sudo apt install npm
+
+
+sudo apt install wget
+wget -qO- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh | bash
+source ~/.profile
+nvm ls-remote
+nvm install 18.12.0
+node -v
+
+npx create-react-app myapp
+npm run build
+npm start
+
+
+sqlite3 --version
+python manage.py makemigrations
+python manage.py migrate
+
+
+//criar admin
+python manage.py createsuperuser
+
+
+// rodart programad react and django
+npm run dev
+python manage.py runserver
+
+
+// Do tutorial
+py manage.py makemigrations --dry-run --verbosity 3
+pip install coverage
+coverage run --omit='*/venv/*' manage.py test
+coverage html
+pip install djangorestframework
+
+
+// requeriments mostrar o que esta usando 
+pip freeze > requirements.txt
+
+pip uninstall -r requirements.txt -y
+
+// requeriments instalar o que vc estava usando
+pip install -r  requirements.txt
+
+// install negocio 
+pip install django-cors-headers
+
+
+// esse conteudo é em html css do boostrap, por favor mais tarde direciona-lo para uma respectiva pasta
+// exemplos de pg 
+https://getbootstrap.com/docs/4.1/examples/
+// codigo fonte das paginas
+view-source:(endereço)
+// css da pagina 
+view-source:(endereço)(neme arquivo css).css
