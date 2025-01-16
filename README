@@ -1,5 +1,9 @@
 # Projeto Bosch
 
+## Objetivo principal:
+
+Construir um sistema que permita carregar documentos (PDF, Word ou texto), extrair deles as informações principais (texto, tabelas, imagens), organizar essas informações em “chunks” e responder a perguntas do usuário usando um modelo de linguagem (LLM) que consulta os dados fornecidos pelos documentos.
+
 Este repositório tem como objetivo construir um sistema que permita:
 
 - Carregar documentos (PDF, Word ou texto)
@@ -7,7 +11,7 @@ Este repositório tem como objetivo construir um sistema que permita:
 - Organizar essas informações em “chunks”
 - Responder a perguntas do usuário utilizando um modelo de linguagem (LLM) que consulta os dados fornecidos pelos documentos
 
-## Escopo Atual
+## Escopo Atual:
 
 - **Formato de documentos**: Apenas PDF (em versões futuras, planeja-se suportar Word e arquivos de texto).
 - **Interface**: Linha de comando (CLI) por ora.
