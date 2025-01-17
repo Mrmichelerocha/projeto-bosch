@@ -35,3 +35,15 @@ Este repositório tem como objetivo construir um sistema que permita:
 ### Para a imagem:
 - Quais características da Furadeira/Parafusadeira a Bateria 12V GSR120-LI tornam seu uso mais prático e eficiente para trabalhos em locais com pouca iluminação?
 - De que forma o design função de impacto da Furadeira de Impacto Bosch GSB 450 RE 450W facilita o uso em materiais mais resistentes como concreto?
+
+
+# Como Executar o codigo:
+
+- Crie uma virtualenv `virtualenv .venv` saiba mais em documentação https://docs.python.org/3/library/venv.html
+- Ative a virtualenv `.venv\Scripts\activate` saiba mais em documentação https://docs.python.org/3/library/venv.html
+- Instale as dependencias do ambiente `pip install -r  requirements.txt` estou usando python 3.10.0
+- Rode o script app.py `Python app.py`
+
+
+![Captura de tela 2025-01-17 195023](https://github.com/user-attachments/assets/c8841231-9f8b-46eb-9bfc-00238bce0f42)
+
