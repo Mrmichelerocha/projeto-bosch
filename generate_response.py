@@ -39,10 +39,10 @@ question_embedding = model.encode([question], convert_to_numpy=True)
 def classify_question(question):
     keywords_mapping = {
         "text": ["estratégia", "desempenho", "relatório"],
-        "table": ["crescimento", "dados", "valores", "tabela", "percentual", "vendas", "produtos", "total"],
+        "table": ["dados", "valores", "tabela", "percentual", "total"],
         "image": ["características", "design", "função", "imagem"]
     }
-    
+
     for question_type, keywords in keywords_mapping.items():
         if any(word in question.lower() for word in keywords):
             return question_type
@@ -135,7 +135,6 @@ def process_table_question(question, chunked_data, model):
 
         return response
 
-
 def process_image_question(question, chunked_data, model):
     image_chunks = [
         (i, chunk) for i, chunk in enumerate(chunked_data)
@@ -192,6 +191,7 @@ def process_image_question(question, chunked_data, model):
         f"Imagens:\n{response_images}" if response_images else ""
     ])
 
+    response = response.replace("●", "*")  # Exemplo de substituição
     return response
 
 if question_type == "text":
