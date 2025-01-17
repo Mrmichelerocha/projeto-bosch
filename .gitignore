@@ -9,6 +9,8 @@ table/
 table
 text/
 text
+uploads
+uploads/
 chunked_data.json
 embeddings_with_metadata.json
 embeddings.npy
