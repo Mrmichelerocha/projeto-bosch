@@ -1,9 +1,16 @@
 from flask import Flask, request, jsonify
-import fitz  # PyMuPDF
-import pdfplumber
 import os
+import sys
+from subprocess import call
+from sentence_transformers import SentenceTransformer
+import faiss
+import numpy as np
+import json
 from io import BytesIO
+import pdfplumber
+import fitz
 import easyocr
+import subprocess
 
 app = Flask(__name__)
 
@@ -12,12 +19,20 @@ IMAGES_DIR = "img"
 TEXT_DIR = "text"
 TABLES_DIR = "table"
 
+# Verifica e cria os diretórios necessários
 for directory in [IMAGES_DIR, TEXT_DIR, TABLES_DIR]:
     if not os.path.exists(directory):
         os.makedirs(directory)
 
 # Inicializa o leitor do EasyOCR com suporte ao português
 reader = easyocr.Reader(['pt', 'en'], gpu=False)
+
+# Modelo de embeddings e índice FAISS
+MODEL = SentenceTransformer('all-MiniLM-L6-v2')
+INDEX = None
+FAISS_INDEX_FILE = 'faiss_index.faiss'
+CHUNKED_DATA_FILE = 'chunked_data.json'
+LLM_SCRIPT = 'generate_response.py'  # Arquivo para gerar resposta com LLM
 
 @app.route('/')
 def home():
@@ -27,13 +42,24 @@ def home():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Upload PDF</title>
+        <title>Processamento de PDF</title>
     </head>
     <body>
         <h1>Upload PDF para Processamento</h1>
         <form action="/process" method="POST" enctype="multipart/form-data">
             <input type="file" name="pdf_file" accept="application/pdf" required>
-            <button type="submit">Processar PDF</button>
+            <button type="submit">Upload PDF</button>
+        </form>
+        <h2>Executar Processamento</h2>
+        <form action="/execute" method="POST">
+            <button type="submit">Executar Chunk e Embeddings</button>
+        </form>
+        <h2>Faça uma Pergunta</h2>
+        <form action="/ask" method="POST">
+            <input type="text" name="question" placeholder="Digite sua pergunta" required>
+            <button type="submit">Perguntar</button>
+            <t>Por padrão está um modelo de baixa potência. Para mudar, veja no GitHub.</t>
+            <p>⚠️ Ao mudar o modelo, pode demorar muito. Aguarde. ⚠️</p>
         </form>
     </body>
     </html>
@@ -45,7 +71,6 @@ def process_pdf():
         return "Erro: Nenhum arquivo enviado", 400
 
     pdf_file = request.files['pdf_file']
-
     if not pdf_file or pdf_file.filename == '':
         return "Erro: Nenhum arquivo selecionado", 400
 
@@ -131,5 +156,71 @@ def process_pdf():
     except Exception as e:
         return f"Erro ao processar o PDF: {e}", 500
 
+@app.route('/execute', methods=['POST'])
+def execute_processing():
+    try:
+        python_executable = sys.executable  # Caminho do Python atual
+        print("Executando chunk_processing.py...")
+        result_chunk = call([python_executable, "chunk_processing.py"])
+        if result_chunk != 0:
+            return f"Erro ao executar chunk_processing.py. Código de saída: {result_chunk}", 500
+
+        print("Executando generate_embeddings.py...")
+        result_embeddings = call([python_executable, "generate_embeddings.py"])
+        if result_embeddings != 0:
+            return f"Erro ao executar generate_embeddings.py. Código de saída: {result_embeddings}", 500
+
+        # Carregar o índice FAISS
+        global INDEX
+        if os.path.exists(FAISS_INDEX_FILE):
+            INDEX = faiss.read_index(FAISS_INDEX_FILE)
+
+        return "Processamento concluído com sucesso!"
+    except Exception as e:
+        return f"Erro ao executar o processamento: {e}", 500
+
+@app.route('/ask', methods=['POST'])
+def ask_question():
+    question = request.form.get('question')
+    if not question:
+        print("Erro: Nenhuma pergunta enviada.")
+        return "Erro: Nenhuma pergunta enviada.", 400
+
+    print(f"Pergunta recebida: {question}")
+
+    try:
+        python_executable = sys.executable
+        print("Executando script LLM...")
+
+        # Usar Popen para capturar saída em tempo real
+        process = subprocess.Popen(
+            [python_executable, "-u", LLM_SCRIPT, question],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            bufsize=1,
+            text=True
+        )
+
+        output = []  # Para acumular a saída do script
+        for line in iter(process.stdout.readline, ''):
+            output.append(line.strip())  # Adiciona cada linha à lista
+            print(line.strip(), flush=True)  # Mostra no terminal a saída intermediária do script
+
+        process.wait()  # Aguarda o processo terminar
+        stderr = process.stderr.read()  # Captura qualquer erro
+
+        if process.returncode != 0:
+            print(f"Erro ao executar o script LLM: {stderr.strip()}")
+            return f"Erro ao gerar a resposta: {stderr.strip()}", 500
+
+        # Juntar a saída do script e retornar como resposta
+        full_output = "\n".join(output)
+        print("Script LLM executado com sucesso!")
+        return full_output, 200
+    except Exception as e:
+        print(f"Erro ao processar a pergunta: {e}")
+        return f"Erro ao processar a pergunta: {e}", 500
+
 if __name__ == '__main__':
+    print("Iniciando o servidor Flask...")
     app.run(debug=True)
