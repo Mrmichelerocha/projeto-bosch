@@ -4,12 +4,11 @@ import csv
 from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-# Diretórios de entrada e saída
-directory_text = 'text'  # Caminho onde os arquivos .txt estão salvos
-directory_table = 'table'  # Caminho onde os arquivos de tabelas .csv estão salvos
-directory_img = 'img'  # Caminho onde os arquivos de imagens estão salvos
-chunk_size = 500  # Tamanho do chunk em palavras
-output_file = 'chunked_data.json'  # Arquivo de saída para os chunks
+directory_text = 'text' 
+directory_table = 'table' 
+directory_img = 'img'  
+chunk_size = 500  
+output_file = 'chunked_data.json' 
 
 # Função para criar chunks de texto usando LangChain TextSplitter
 def chunk_text_with_langchain(text, chunk_size):
@@ -17,7 +16,6 @@ def chunk_text_with_langchain(text, chunk_size):
     chunks = text_splitter.split_text(text)
     return chunks
 
-# Função para processar arquivos de texto
 def process_text_files(directory, chunk_size):
     chunked_texts = []
 
@@ -25,14 +23,11 @@ def process_text_files(directory, chunk_size):
         if filename.endswith('.txt'):
             file_path = os.path.join(directory, filename)
             
-            # Ler conteúdo do arquivo
             with open(file_path, 'r', encoding='utf-8') as file:
                 content = file.read()
 
-            # Criar chunks usando LangChain TextSplitter
             chunks = chunk_text_with_langchain(content, chunk_size)
 
-            # Identificar a página a partir do nome do arquivo
             page_number = filename.split('_')[1].split('.')[0] if '_' in filename else 'unknown'
 
             for index, chunk in enumerate(chunks):
@@ -48,7 +43,6 @@ def process_text_files(directory, chunk_size):
 
     return chunked_texts
 
-# Função para processar arquivos de tabelas
 def process_table_files(directory):
     chunked_tables = []
 
@@ -74,7 +68,6 @@ def process_table_files(directory):
 
     return chunked_tables
 
-# Função para processar arquivos de imagens
 def process_image_files(directory):
     chunked_images = []
 
@@ -104,15 +97,12 @@ def process_image_files(directory):
 
     return chunked_images
 
-# Processar os arquivos
 chunked_texts = process_text_files(directory_text, chunk_size)
 chunked_tables = process_table_files(directory_table)
 chunked_images = process_image_files(directory_img)
 
-# Combinar todos os documentos
 all_chunks = chunked_texts + chunked_tables + chunked_images
 
-# Salvar os chunks em um arquivo JSON
 with open(output_file, 'w', encoding='utf-8') as json_file:
     json.dump([{
         'page_content': doc.page_content,
