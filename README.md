@@ -18,6 +18,9 @@ Este repositório tem como objetivo construir um sistema que permita:
 
 ---
 
+## Arquivo enviado:
+- Relatório de Vendas Mensais Bosch.pdf
+
 ## Exemplos de Perguntas:
 
 ### Para o texto:
