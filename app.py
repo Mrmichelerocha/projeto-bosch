@@ -14,20 +14,16 @@ import subprocess
 
 app = Flask(__name__)
 
-# Diretórios para salvar os resultados extraídos
 IMAGES_DIR = "img"
 TEXT_DIR = "text"
 TABLES_DIR = "table"
 
-# Verifica e cria os diretórios necessários
 for directory in [IMAGES_DIR, TEXT_DIR, TABLES_DIR]:
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-# Inicializa o leitor do EasyOCR com suporte ao português
 reader = easyocr.Reader(['pt', 'en'], gpu=False)
 
-# Modelo de embeddings e índice FAISS
 MODEL = SentenceTransformer('all-MiniLM-L6-v2')
 INDEX = None
 FAISS_INDEX_FILE = 'faiss_index.faiss'
@@ -58,8 +54,8 @@ def home():
         <form action="/ask" method="POST">
             <input type="text" name="question" placeholder="Digite sua pergunta" required>
             <button type="submit">Perguntar</button>
-            <t>Por padrão está um modelo de baixa potência. Para mudar, veja no GitHub.</t>
-            <p>⚠️ Ao mudar o modelo, pode demorar muito. Aguarde. ⚠️</p>
+            <t>Por padrão está um modelo de baixa potência</t>
+            <p>⚠️ Ao enviar pode demorara muito. Aguarde ⚠️ </p>
         </form>
     </body>
     </html>
@@ -85,18 +81,14 @@ def process_pdf():
             "tabelas_paginas": {}
         }
 
-        # Salva o PDF em memória usando BytesIO
         pdf_bytes = BytesIO(pdf_file.read())
 
-        # Processa texto e tabelas usando pdfplumber
         with pdfplumber.open(pdf_bytes) as pdf:
             dados_pdf["numero_paginas"] = len(pdf.pages)
             for i, pagina in enumerate(pdf.pages):
-                # Extrai tabelas
                 tabelas = pagina.extract_tables()
                 texto_exclusivo = pagina.extract_text()
 
-                # Remove linhas de texto que estão em tabelas
                 if tabelas:
                     table_path = os.path.join(TABLES_DIR, f"page_{i+1}_table.csv")
                     with open(table_path, "w", encoding="utf-8") as table_file:
@@ -104,7 +96,6 @@ def process_pdf():
                             for linha in tabela:
                                 table_file.write(",".join(map(str, linha)) + "\n")
 
-                    # Remove texto das tabelas do texto geral
                     for tabela in tabelas:
                         tabela_texto = [" ".join(map(str, linha)) for linha in tabela]
                         for linha in tabela_texto:
@@ -112,15 +103,13 @@ def process_pdf():
 
                     dados_pdf["tabelas_paginas"][f"pagina_{i+1}"] = table_path
 
-                # Salva texto restante (excluindo tabelas)
                 if texto_exclusivo.strip():
                     text_path = os.path.join(TEXT_DIR, f"page_{i+1}.txt")
                     with open(text_path, "w", encoding="utf-8") as text_file:
                         text_file.write(texto_exclusivo.strip())
                     dados_pdf["textos_paginas"][f"pagina_{i+1}"] = text_path
 
-        # Processa imagens usando fitz
-        pdf_bytes.seek(0)  # Resetamos o stream para o fitz
+        pdf_bytes.seek(0) 
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         for i in range(len(doc)):
             page = doc[i]
@@ -131,12 +120,10 @@ def process_pdf():
                 image_bytes = base_image["image"]
                 image_ext = base_image["ext"]
 
-                # Define o caminho para salvar a imagem
                 image_path = os.path.join(IMAGES_DIR, f"page_{i+1}_image_{img_index + 1}.{image_ext}")
                 with open(image_path, "wb") as image_file:
                     image_file.write(image_bytes)
 
-                # OCR na imagem extraída
                 ocr_text = reader.readtext(image_path, detail=0)
                 ocr_text_path = os.path.join(IMAGES_DIR, f"page_{i+1}_image_{img_index + 1}_ocr.txt")
                 with open(ocr_text_path, "w", encoding="utf-8") as ocr_file:
@@ -147,10 +134,8 @@ def process_pdf():
             if imagens:
                 dados_pdf["imagens_paginas"][f"pagina_{i+1}"] = imagens
 
-        # Fecha o documento após o processamento
         doc.close()
 
-        # Retorna os dados extraídos
         return jsonify(dados_pdf)
 
     except Exception as e:
@@ -159,7 +144,7 @@ def process_pdf():
 @app.route('/execute', methods=['POST'])
 def execute_processing():
     try:
-        python_executable = sys.executable  # Caminho do Python atual
+        python_executable = sys.executable  
         print("Executando chunk_processing.py...")
         result_chunk = call([python_executable, "chunk_processing.py"])
         if result_chunk != 0:
@@ -201,19 +186,18 @@ def ask_question():
             text=True
         )
 
-        output = []  # Para acumular a saída do script
+        output = []  
         for line in iter(process.stdout.readline, ''):
-            output.append(line.strip())  # Adiciona cada linha à lista
-            print(line.strip(), flush=True)  # Mostra no terminal a saída intermediária do script
+            output.append(line.strip())  
+            print(line.strip(), flush=True)  
 
-        process.wait()  # Aguarda o processo terminar
-        stderr = process.stderr.read()  # Captura qualquer erro
+        process.wait() 
+        stderr = process.stderr.read() 
 
         if process.returncode != 0:
             print(f"Erro ao executar o script LLM: {stderr.strip()}")
             return f"Erro ao gerar a resposta: {stderr.strip()}", 500
 
-        # Juntar a saída do script e retornar como resposta
         full_output = "\n".join(output)
         print("Script LLM executado com sucesso!")
         return full_output, 200
