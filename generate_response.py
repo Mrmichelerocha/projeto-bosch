@@ -5,12 +5,13 @@ from sentence_transformers import SentenceTransformer
 import faiss
 import pandas as pd
 import os
+from sklearn.metrics.pairwise import cosine_similarity
 
 CHUNKED_DATA_FILE = 'chunked_data.json'
 FAISS_INDEX_FILE = 'faiss_index.faiss'
 
 if len(sys.argv) < 2:
-    print("Erro: Por favor, forneça uma pergunta como argumento.\nExemplo: python generate_response.py \"Qual é o objetivo deste projeto?\"")
+    print("Erro: Por favor, forneça uma pergunta como argumento.\nExemplo: python generate_response.py \"Qual é o objetivo deste projeto?\")")
     sys.exit(1)
 
 question = sys.argv[1]
@@ -50,6 +51,41 @@ def classify_question(question):
 
 question_type = classify_question(question)
 
+def evaluate_chunks(question_embedding, retrieved_chunks):
+    """
+    Avalia a qualidade dos chunks retornados dinamicamente com base na similaridade.
+    """
+    if not retrieved_chunks:
+        return {
+            "cosine_similarity": 0,
+            "coverage": 0,
+            "precision": 0
+        }
+
+    chunk_embeddings = [
+        model.encode([chunk['page_content']], convert_to_numpy=True)[0]
+        for chunk in retrieved_chunks if 'page_content' in chunk
+    ]
+
+    similarities = cosine_similarity(question_embedding, np.array(chunk_embeddings))
+    avg_similarity = np.mean(similarities)
+
+    # Define um limite de similaridade para considerar um chunk como relevante
+    threshold = 0.7
+    relevant_chunks = [
+        chunk for idx, chunk in enumerate(retrieved_chunks)
+        if similarities[0][idx] > threshold
+    ]
+
+    precision = len(relevant_chunks) / len(retrieved_chunks) if retrieved_chunks else 0
+    coverage = len(relevant_chunks) / len(chunked_data) if chunked_data else 0
+
+    return {
+        "cosine_similarity": avg_similarity,
+        "coverage": coverage,
+        "precision": precision
+    }
+
 def process_text_question(question_embedding, chunked_data, model):
     filtered_chunks = [
         (i, chunk) for i, chunk in enumerate(chunked_data)
@@ -57,7 +93,7 @@ def process_text_question(question_embedding, chunked_data, model):
     ]
 
     if not filtered_chunks:
-        return "Nenhum dado textual relevante encontrado."
+        return "Nenhum dado textual relevante encontrado.", {}
 
     filtered_embeddings = [
         model.encode([chunk['page_content']], convert_to_numpy=True)[0]
@@ -72,14 +108,16 @@ def process_text_question(question_embedding, chunked_data, model):
     relevant_chunks = [
         filtered_chunks[idx][1] for idx in indices[0] if idx < len(filtered_chunks)
     ]
-    
+
     response = "\n".join([
         chunk.get('page_content', 'Conteúdo não encontrado')
         for chunk in relevant_chunks
         if isinstance(chunk, dict)
     ])
 
-    return response or "Nenhum conteúdo relevante encontrado."
+    metrics = evaluate_chunks(question_embedding, relevant_chunks)
+
+    return response or "Nenhum conteúdo relevante encontrado.", metrics
 
 def process_table_question(question, chunked_data, model):
     table_path = './table'
@@ -195,14 +233,24 @@ def process_image_question(question, chunked_data, model):
     return response
 
 if question_type == "text":
-    response = process_text_question(question_embedding, chunked_data, model)
+    response, metrics = process_text_question(question_embedding, chunked_data, model)
+    print("Resposta gerada com base nos dados mais relevantes:\n")
+    print(response)
+    print("\nMétricas de Avaliação:")
+    print(f"- Similaridade de Coseno Média: {metrics['cosine_similarity']:.4f}")
+    print(f"- Cobertura de Chunks Relevantes: {metrics['coverage']:.4f}")
+    print(f"- Precisão (Precision): {metrics['precision']:.4f}")
+
 elif question_type == "table":
     response = process_table_question(question, chunked_data, model)
+    print("Resposta gerada com base nos dados mais relevantes:\n")
+    print(response)
+
 elif question_type == "image":
     response = process_image_question(question, chunked_data, model)
+    print("Resposta gerada com base nos dados mais relevantes:\n")
+    print(response)
+
 else:
     response = f"Tipo de pergunta '{question_type}' não suportado no momento."
-
-print(f"Tipo de pergunta detectado: {question_type}")
-print("Resposta gerada com base nos dados mais relevantes:\n")
-print(response)
+    print(response)
