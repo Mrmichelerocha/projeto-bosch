@@ -19,8 +19,15 @@ TEXT_DIR = "text"
 TABLES_DIR = "table"
 
 for directory in [IMAGES_DIR, TEXT_DIR, TABLES_DIR]:
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+    try:
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+            print(f"Pasta criada: {directory}")
+        else:
+            print(f"Pasta já existe: {directory}")
+    except Exception as e:
+        print(f"Erro ao criar a pasta {directory}: {e}")
+
 
 reader = easyocr.Reader(['pt', 'en'], gpu=False)
 
